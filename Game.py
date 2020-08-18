@@ -1,10 +1,16 @@
 import random
-from Block import IBlock, JBlock, LBlock, OBlock, ZBlock, SBlock, TBlock
+import Graphics
+
+class Block:
+    def __init__(self, identifier, coordinates, pivot_point): # coordinates = [[y,x]...]
+        self.identifier = identifier
+        self.coordinates = coordinates
+        self.pivot_point = pivot_point
 
 class Game:
     def __init__(self):
         self.gameover = True
-        self.grid = [[0 for i in range(10)] for i in range(21)]
+        self.grid = [[0 for i in range(10)] for i in range(20)]
         self.score = 0
         self.level = 1
         self.speed = "slow"
@@ -12,48 +18,148 @@ class Game:
         self.next_block = None
         self.queue = []
         self.bank = None
-        # self.brick_types = ['i', 'j', 'l', 'o', 's', 't', 'z']
 
-    def generate_rand_brick(self):
-        brick_types = {
-            0: IBlock(), 1: JBlock(), 2: LBlock(), 3: OBlock(), 
-            4: SBlock(), 5: TBlock(), 6: ZBlock()
+    def generate_rand_block(self):
+        blocks = {
+            1: Block(1, [[0,3], [0,4], [0,5], [0,6]], [0,5]),
+            2: Block(2, [[0,4], [0,5], [1,4], [1,5]], [0,4]),
+            3: Block(3, [[0,3], [0,4], [0,5], [1,4]], [0,4]), 
+            4: Block(4, [[0,3], [0,4], [0,5], [1,3]], [0,4]),
+            5: Block(5, [[0,3], [0,4], [0,5], [1,5]], [0,4]),
+            6: Block(6, [[0,4], [0,5], [1,3], [1,4]], [1,4]),
+            7: Block(7, [[0,3], [0,4], [1,4], [1,5]], [1,4])
         }
 
-        num = random.randint(0, 6)
+        num = random.randint(1, 7)
 
-        return brick_types[num]
+        return blocks[num]
 
     def start(self):
         self.gameover = False
-        self.current_block = Game.generate_rand_brick(self)
-        self.current_block.x = 65
-        self.current_block.y = 10
-        self.grid[0][3:7] = [1 for i in range(4)]
-        self.next_block = Game.generate_rand_brick(self)
-        
+        self.current_block = Game.generate_rand_block(self)
+        self.next_block = Game.generate_rand_block(self)
+
         for i in range(5):
-            self.queue.append(Game.generate_rand_brick(self))
+            self.queue.append(Game.generate_rand_block(self))
+
+        for coordinate in self.current_block.coordinates:
+            self.grid[coordinate[0]][coordinate[1]] = self.current_block.identifier
 
     def is_gameover(self):
-        if 1 in self.grid[0]: 
-            return True
-
         return False
 
-    def is_tetris(self):
-        if (
-            set(self.grid[20]) == 1
-            and set(self.grid[19]) == 1 
-            and set(self.grid(18)) == 1
-            and set(self.grid[17]) == 1 
-        ):
-            return True
+    def regen(self):
+        self.current_block = self.next_block 
+        self.next_block = self.queue.pop()
+        self.queue.append(Game.generate_rand_block(self))
 
-        return False
+    def move_block(self, stdscr, block, direction):
+        if direction == "down" and (max([coordinate[0] for coordinate in block.coordinates]) < 19):
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
 
-    def clear_lines(self, _range):
-        return 0
+                self.grid[y][x] = 0
+                Graphics.fill_square(stdscr, y, x, 0) 
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
 
-    def place_brick(self, brick_type, position):
-        return 0
+                self.grid[y+1][x] = block.identifier
+                Graphics.fill_square(stdscr, y+1, x, block.identifier) 
+
+            for i in range(len(block.coordinates)):
+                block.coordinates[i] = [block.coordinates[i][0]+1, block.coordinates[i][1]]
+            block.pivot_point = [block.pivot_point[0]+1, block.pivot_point[1]]
+        elif direction == "down":
+            Game.regen(self)
+        elif direction == "right":
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
+
+                self.grid[y][x] = 0
+                Graphics.fill_square(stdscr, y, x, 0) 
+
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
+
+                self.grid[y][x+1] = block.identifier
+                Graphics.fill_square(stdscr, y, x+1, block.identifier) 
+
+            for i in range(len(block.coordinates)):
+                block.coordinates[i] = [block.coordinates[i][0], block.coordinates[i][1]+1]
+            block.pivot_point = [block.pivot_point[0], block.pivot_point[1] + 1]
+        elif direction == "left":
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
+
+                self.grid[y][x] = 0
+                Graphics.fill_square(stdscr, y, x, 0)
+
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
+
+                self.grid[y][x-1] = block.identifier
+                Graphics.fill_square(stdscr, y, x-1, block.identifier)
+
+            for i in range(len(block.coordinates)):
+                block.coordinates[i] = [block.coordinates[i][0], block.coordinates[i][1]-1]
+            block.pivot_point = [block.pivot_point[0], block.pivot_point[1]-1]
+
+        elif direction == "bottom":
+            y_drop = 19 - max([coordinate[0] for coordinate in block.coordinates])
+
+            for y,x in block.coordinates:
+                for temp in range(y, 19):
+                    if self.grid[temp][x] != 0 and [temp, x] not in block.coordinates:
+                        y_drop = temp-y+1
+
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
+
+                self.grid[y][x] = 0
+                Graphics.fill_square(stdscr, y, x, 0)
+
+            for coordinate in block.coordinates:
+                y = coordinate[0]
+                x = coordinate[1]
+
+                self.grid[y+y_drop][x] = block.identifier
+                Graphics.fill_square(stdscr, y+y_drop, x, block.identifier)
+
+            for i in range(len(block.coordinates)):
+                block.coordinates[i] = [block.coordinates[i][0] + y_drop, block.coordinates[i][1]]
+
+            Game.regen(self)
+           
+
+    def rotate_block(self, stdscr, block):
+        pivot_y = block.pivot_point[0]
+        pivot_x = block.pivot_point[1]
+
+        for coordinate in block.coordinates:
+            y = coordinate[0]
+            x = coordinate[1]
+
+            self.grid[y][x] = 0
+            Graphics.fill_square(stdscr, y, x, 0)
+        
+        u = 0
+        for coordinate in block.coordinates:
+            y = coordinate[0]
+            x = coordinate[1]
+
+            relative_coordinates = [y-pivot_y, x-pivot_x]
+            temp = [relative_coordinates[1], -1*relative_coordinates[0]]
+            new = [pivot_y+temp[0], pivot_x+temp[1]]
+
+            self.grid[new[0]][new[1]] = block.identifier
+            Graphics.fill_square(stdscr, new[0], new[1], block.identifier)
+
+            block.coordinates[u] = [new[0], new[1]]
+            u += 1

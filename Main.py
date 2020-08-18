@@ -2,43 +2,49 @@ from Game import Game
 from curses import wrapper
 import curses
 import Graphics 
+import threading
+import time
 
 game = Game()
 
-def main(stdscr):
-    # initial set-up
-    c = stdscr.getch()
-
-    while True:
-        if c == 10: # enter key
-            game.start()
-            Graphics.initialize(height=curses.LINES-1, width=curses.COLS-1)
-            Graphics.draw_queue(stdscr)
-            Graphics.draw_bank(stdscr)
-            Graphics.draw_next(stdscr)
-            Graphics.draw_grid(stdscr, game.grid)
-            break
-
+def key_listener(stdscr):
     while game.gameover == False:
-        Graphics.draw_block(stdscr, game.current_block)
-
         c = stdscr.getch()
+        curses.flushinp()
 
         if c == curses.KEY_UP:
-            game.current_block.rotate() 
+            game.rotate_block(stdscr, game.current_block) 
         elif c == curses.KEY_DOWN:
-            Graphics.erase(stdscr, game.current_block)
-            game.current_block.move("down") 
+            game.move_block(stdscr, game.current_block, "down")
         elif c == curses.KEY_LEFT:
-            Graphics.erase(stdscr, game.current_block)
-            game.current_block.move("left") 
+            game.move_block(stdscr, game.current_block, "left")
         elif c == curses.KEY_RIGHT:
-            Graphics.erase(stdscr, game.current_block)
-            game.current_block.move("right") 
+            game.move_block(stdscr, game.current_block, "right")
+        elif c == ord(" "):
+            game.move_block(stdscr, game.current_block, "bottom")
         elif c == ord("q"):
-            break
-        else:
-            continue
+            game.gameover = False
+        time.sleep(0.05)
 
+def main(stdscr):
+    curses.initscr()
+    stdscr.clear()
+
+    game.start()
+    Graphics.initialize(stdscr, height=curses.LINES-1, width=curses.COLS-1)
+    Graphics.draw_queue(stdscr)
+    Graphics.draw_bank(stdscr)
+    Graphics.draw_next(stdscr)
+    Graphics.draw_grid(stdscr, game.grid)
+
+    t = threading.Thread(name ='daemon', target=key_listener, args=(stdscr,))
+    t.setDaemon(True)
+    t.start()
+
+    while game.gameover == False:
+        game.move_block(stdscr, game.current_block, "down")
+
+        stdscr.refresh()
+        time.sleep(1)
 
 wrapper(main)
