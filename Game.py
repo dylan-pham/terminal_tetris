@@ -111,12 +111,15 @@ class Game:
             block.pivot_point = [block.pivot_point[0], block.pivot_point[1]-1]
 
         elif direction == "bottom":
-            y_drop = 19 - max([coordinate[0] for coordinate in block.coordinates])
+            max_drops = []
 
             for y,x in block.coordinates:
                 for temp in range(y, 19):
-                    if self.grid[temp][x] != 0 and [temp, x] not in block.coordinates:
-                        y_drop = temp-y+1
+                    if self.grid[temp][x] != 0 and [temp,x] not in block.coordinates:
+                        max_drops.append(temp-y-1)
+            
+            max_drops.append(19-y)
+            y_drop = min(max_drops)
 
             for coordinate in block.coordinates:
                 y = coordinate[0]
