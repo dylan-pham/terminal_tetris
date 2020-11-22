@@ -1,3 +1,3 @@
 # terminal_tetris
 
-(unfinished)
+(unfinished) ~ experimenting with Curses library
